@@ -71,3 +71,89 @@ def test_sync_and_async_clients_expose_the_same_methods() -> None:
         public = {n for n in vars(sync_cls) if not n.startswith("_")}
         assert public == {n for n in vars(async_cls) if not n.startswith("_")}
     sync.close()
+
+
+def test_region_resolution_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("STYNE_BASE_URL", raising=False)
+    monkeypatch.delenv("STYNE_REGION", raising=False)
+    assert _transport.resolve_base_url(None) == "https://ash.api.styne.ai/v1"
+    monkeypatch.setenv("STYNE_REGION", "ams")
+    assert _transport.resolve_base_url(None) == "https://ams.api.styne.ai/v1"
+    assert _transport.resolve_base_url(None, "ash") == "https://ash.api.styne.ai/v1"
+    assert _transport.resolve_base_url(None, "eu") == "https://ams.api.styne.ai/v1"
+    assert _transport.resolve_base_url(None, "us-east") == "https://ash.api.styne.ai/v1"
+    monkeypatch.setenv("STYNE_BASE_URL", "https://api.styne.ai/v1/")
+    assert _transport.resolve_base_url(None, "ams") == "https://api.styne.ai/v1"
+    assert _transport.resolve_base_url("https://x.example.com", "ams") == "https://x.example.com"
+
+
+def test_region_unknown_lists_choices() -> None:
+    with pytest.raises(errors.StyneError, match="ash, ams"):
+        _transport.resolve_base_url(None, "mars")
+
+
+def test_client_region_option(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("STYNE_BASE_URL", raising=False)
+    monkeypatch.delenv("STYNE_REGION", raising=False)
+    with client.Client("k", region="ams") as c:
+        assert c._transport._base == "https://ams.api.styne.ai/v1"
+    with client.Client("k") as c:
+        assert c._transport._base == "https://ash.api.styne.ai/v1"
+
+
+def test_chosen_region_is_the_default_of_a_create(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("STYNE_BASE_URL", raising=False)
+    monkeypatch.delenv("STYNE_REGION", raising=False)
+    with client.Client("k") as c:
+        assert c._transport.region is None
+    with client.Client("k", region="eu") as c:
+        assert c._transport.region == "ams"
+    monkeypatch.setenv("STYNE_REGION", "us-east")
+    with client.Client("k") as c:
+        assert c._transport.region == "ash"
+        assert c.browsers._t.region == "ash"
+
+
+@pytest.mark.parametrize(
+    ("alias", "region"),
+    [("us-east", "ash"), ("ASHBURN", "ash"), (" eu ", "ams"), ("eu-central", "ams"), ("ams", "ams")],
+)
+def test_region_aliases_match_the_api(alias: str, region: str) -> None:
+    assert _transport.region_name(alias) == region
+
+
+def test_snapshot_create_keeps_the_snapshot_region() -> None:
+    import json
+
+    import httpx
+    from conftest import make_async_client, make_client
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(201, json={"id": "vm_1", "state": "running"})
+
+    c, rec = make_client(handle)
+    c._transport.region = "ams"
+    c.vms.create(snapshot="snap_1")
+    c.vms.create(template="small")
+    c.vms.create(snapshot="snap_1", region="ash")
+    assert [json.loads(r.content).get("region") for r in rec.requests] == [None, "ams", "ash"]
+
+    ac, arec = make_async_client(handle)
+    ac._transport.region = "ams"
+
+    async def go() -> None:
+        await ac.vms.create(snapshot="snap_1")
+        await ac.vms.create(template="small")
+
+    import asyncio
+
+    asyncio.run(go())
+    assert [json.loads(r.content).get("region") for r in arec.requests] == [None, "ams"]
+
+
+def test_https_error_does_not_echo_credentials() -> None:
+    with pytest.raises(errors.StyneError) as excinfo:
+        _transport.resolve_base_url("http://user:secret@example.com/v1?token=abc")
+    assert "secret" not in str(excinfo.value)
+    assert "token" not in str(excinfo.value)
+    assert "example.com" in str(excinfo.value)

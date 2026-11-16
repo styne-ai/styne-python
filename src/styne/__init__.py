@@ -1,6 +1,7 @@
 """Python client for the Styne API."""
 
 from . import models
+from ._reconnect import is_disconnect
 from ._version import __version__
 from .aclient import (
     AsyncBrowser,
@@ -88,5 +89,6 @@ __all__ = [
     "VmEndedError",
     "Vms",
     "__version__",
+    "is_disconnect",
     "models",
 ]

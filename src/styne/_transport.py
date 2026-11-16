@@ -17,7 +17,32 @@ import httpx
 from ._version import __version__
 from .errors import APIConnectionError, APITimeoutError, StyneError, error_from_payload
 
-DEFAULT_BASE_URL = "https://api.styne.ai/v1"
+REGIONS = {"ash": "US East (Ashburn)", "ams": "Europe (Amsterdam)"}
+REGION_ALIASES = {"us-east": "ash", "ashburn": "ash", "eu": "ams", "eu-central": "ams"}
+DEFAULT_REGION = "ash"
+
+
+def region_name(region: str) -> str:
+    """Return the id of a region (``ash``, ``ams``; aliases ``us-east`` and ``eu``)."""
+    name = region.strip().lower()
+    name = REGION_ALIASES.get(name, name)
+    if name not in REGIONS:
+        raise StyneError(f"unknown region {region!r}: use one of {', '.join(REGIONS)}")
+    return name
+
+
+def region_base_url(region: str) -> str:
+    """Return the API URL of a region (``ash``, ``ams``; aliases ``us-east`` and ``eu``)."""
+    return f"https://{region_name(region)}.api.styne.ai/v1"
+
+
+def resolve_region(region: Optional[str]) -> Optional[str]:
+    """The region the client was told to use (``region`` or ``STYNE_REGION``), or None for the account default."""
+    chosen = region or os.environ.get("STYNE_REGION")
+    return region_name(chosen) if chosen else None
+
+
+DEFAULT_BASE_URL = region_base_url(DEFAULT_REGION)
 DEFAULT_TIMEOUT = 60.0
 DEFAULT_MAX_RETRIES = 2
 _RETRY_STATUS = frozenset({408, 409, 429, 500, 502, 503, 504})
@@ -67,11 +92,17 @@ def resolve_api_key(api_key: Optional[str]) -> str:
     return key
 
 
-def resolve_base_url(base_url: Optional[str]) -> str:
-    url = (base_url or os.environ.get("STYNE_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
+def resolve_base_url(base_url: Optional[str], region: Optional[str] = None) -> str:
+    """Order: ``base_url``, ``STYNE_BASE_URL``, ``region``, ``STYNE_REGION``, then the default region."""
+    chosen = region or os.environ.get("STYNE_REGION")
+    url = (
+        base_url or os.environ.get("STYNE_BASE_URL") or (region_base_url(chosen) if chosen else DEFAULT_BASE_URL)
+    ).rstrip("/")
     parts = urlsplit(url)
     if parts.scheme != "https" and not (parts.scheme == "http" and parts.hostname in _LOCAL_HOSTS):
-        raise StyneError(f"base URL must use https (http only for localhost): {url}")
+        raise StyneError(
+            f"base URL must use https (http only for localhost): got {parts.scheme or 'no scheme'} for {parts.hostname}"
+        )
     return url
 
 
@@ -139,6 +170,7 @@ def _gone_after_retry(request: Request, response: httpx.Response, attempt: int) 
 class _Base:
     def __init__(self, api_key: str, base_url: str, max_retries: int) -> None:
         self.max_retries = max_retries
+        self.region: Optional[str] = None
         self._base = base_url.rstrip("/")
         self._headers = {"Authorization": f"Bearer {api_key}", "User-Agent": f"styne-python/{__version__}"}
 
@@ -310,6 +342,11 @@ class AsyncTransport(_Base):
 
 __all__ = [
     "DEFAULT_BASE_URL",
+    "DEFAULT_REGION",
+    "REGIONS",
+    "region_base_url",
+    "region_name",
+    "resolve_region",
     "NO_READ_TIMEOUT",
     "AsyncTransport",
     "Event",

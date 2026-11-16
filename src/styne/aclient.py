@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 from types import TracebackType
-from typing import Any, AsyncIterator, Dict, List, Mapping, Optional, Type, Union
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Mapping, Optional, Type, TypeVar, Union
 
 import httpx
 
 from . import _ops
 from ._ops import seg
+from ._reconnect import backoff, check_running
+from ._reconnect import is_disconnect as _is_disconnect
 from ._transport import (
     DEFAULT_MAX_RETRIES,
     DEFAULT_TIMEOUT,
@@ -17,12 +20,16 @@ from ._transport import (
     Request,
     resolve_api_key,
     resolve_base_url,
+    resolve_region,
 )
 from .errors import NotFoundError, StyneError
 from .models import BrowserInfo, Checkpoint, Port, Region, Snapshot, Template, VmInfo
 from .types import CommandResult, Control, FileEntry, StreamDecoder, StreamEvent
 
 Command = _ops.Command
+
+
+T = TypeVar("T")
 
 
 class _AsyncResource:
@@ -260,7 +267,7 @@ class AsyncVms(_AsyncResource):
             "size": size,
             "vcpus": vcpus,
             "memory_mib": memory_mib,
-            "region": region,
+            "region": region or (None if snapshot else self._t.region),
             "timeout_seconds": timeout_seconds,
             "auto_pause": auto_pause,
             "auto_resume": auto_resume,
@@ -345,6 +352,36 @@ class AsyncBrowser(_AsyncResource):
         self._data = await self._json(Request("GET", self._path()))
         return self
 
+    async def with_reconnect(
+        self,
+        connect: Callable[[str], Awaitable[Any]],
+        run: Callable[[Any, int], Awaitable[T]],
+        *,
+        max_reconnects: int = 5,
+        delay: float = 0.5,
+        is_disconnect: Callable[[BaseException], bool] = _is_disconnect,
+    ) -> T:
+        """Call ``run(browser, attempt)`` and, when the CDP socket closes, connect again and call it again.
+
+        ``connect`` turns the current ``cdp_url`` into your client's browser object, for example
+        ``playwright.chromium.connect_over_cdp`` (a coroutine function). The browser, its pages and their state
+        live on the server and survive a closed socket, so make ``run`` continue from ``context.pages``;
+        ``attempt`` counts from 0. ``run`` starts again from the top, so it must be safe to repeat, and it owns
+        the browser object it is given (close it if you need to). ``delay`` is in seconds; the wait before
+        reconnect n is ``delay * n``. ``is_disconnect`` decides which errors mean a closed socket. Other errors,
+        and the last one after ``max_reconnects`` tries, are raised unchanged.
+        """
+        attempt = 0
+        while True:
+            check_running(self.id, (await self.refresh()).state)
+            try:
+                return await run(await connect(self.cdp_url), attempt)
+            except Exception as error:
+                if attempt >= max_reconnects or not is_disconnect(error):
+                    raise
+            await asyncio.sleep(backoff(delay, attempt))
+            attempt += 1
+
     async def take_control(self, holder: Optional[str] = None) -> Control:
         """Hand the session to a person (``holder`` names them in the audit log).
 
@@ -393,7 +430,7 @@ class AsyncBrowsers(_AsyncResource):
     ) -> AsyncBrowser:
         """Start a browser."""
         fields = {
-            "region": region,
+            "region": region or self._t.region,
             "timeout_seconds": timeout_seconds,
             "secure": secure,
             "metadata": metadata,
@@ -431,6 +468,8 @@ class AsyncTemplates(_AsyncResource):
 class AsyncClient:
     """Async entry point. Reads the key from ``STYNE_API_KEY`` and the URL from ``STYNE_BASE_URL`` when not given.
 
+    ``region`` (``ash`` or ``ams``; ``STYNE_REGION``) picks the regional API host. Default: ``ash``.
+
     ``http_client`` replaces the underlying ``httpx.AsyncClient`` (proxies, limits); the key, URL and user agent are
     still applied to every request.
     """
@@ -440,12 +479,15 @@ class AsyncClient:
         api_key: Optional[str] = None,
         *,
         base_url: Optional[str] = None,
+        region: Optional[str] = None,
         timeout: float = DEFAULT_TIMEOUT,
         max_retries: int = DEFAULT_MAX_RETRIES,
         http_client: Optional[httpx.AsyncClient] = None,
     ) -> None:
-        key, url = resolve_api_key(api_key), resolve_base_url(base_url)
+        key, url = resolve_api_key(api_key), resolve_base_url(base_url, region)
+        chosen = resolve_region(region)
         self._transport = AsyncTransport(key, url, timeout, max_retries, http_client)
+        self._transport.region = chosen
         self.vms = AsyncVms(self._transport)
         self.snapshots = AsyncSnapshots(self._transport)
         self.browsers = AsyncBrowsers(self._transport)
