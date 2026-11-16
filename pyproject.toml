@@ -1,0 +1,64 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "styne-sdk"
+dynamic = ["version"]
+description = "Python client for the Styne API: VMs and cloud browsers."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+authors = [{ name = "Styne AI", email = "support@styne.ai" }]
+keywords = ["styne", "vm", "sandbox", "browser", "cdp", "api"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Typing :: Typed",
+]
+dependencies = ["httpx>=0.25,<1", "attrs>=22.2"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "ruff", "mypy", "build", "websockets"]
+
+[project.urls]
+Homepage = "https://styne.ai"
+Repository = "https://github.com/styne-ai/styne-python"
+Issues = "https://github.com/styne-ai/styne-python/issues"
+
+[tool.hatch.version]
+path = "src/styne/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/styne"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/styne", "README.md", "LICENSE", "NOTICE", "tests", "openapi.yaml"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["src/styne/_generated"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["UP006", "UP007", "UP035", "UP045"]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+exclude = ["src/styne/_generated"]
+
+[[tool.mypy.overrides]]
+module = "styne._generated.*"
+ignore_errors = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+markers = ["live: runs against the real API; needs STYNE_API_KEY"]
+addopts = "-m 'not live'"

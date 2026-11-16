@@ -1,0 +1,5178 @@
+openapi: 3.1.0
+info:
+  title: Styne API
+  version: 1.0.0
+  summary: StyneVM and StyneBrowser
+  description: 'All routes are served on https://api.styne.ai/v1. Operations marked x-status: planned are not served yet.'
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+servers:
+- url: https://api.styne.ai/v1
+security:
+- bearer: []
+tags:
+- name: Account
+- name: Agents
+- name: Browsers
+- name: CI
+- name: Checkpoints
+- name: Commands
+- name: Files
+- name: Keys
+- name: Ports
+- name: Regions
+- name: SSH
+- name: Snapshots
+- name: State
+- name: Templates
+- name: VMs
+- name: Webhooks
+paths:
+  /vms:
+    post:
+      tags:
+      - VMs
+      operationId: createVm
+      summary: Create a VM from a template, snapshot or size
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVm'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vm'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    get:
+      tags:
+      - VMs
+      operationId: listVms
+      summary: 'List VMs (filters: state, region, metadata)'
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Vm'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}:
+    get:
+      tags:
+      - VMs
+      operationId: getVm
+      summary: Read one VM
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vm'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      tags:
+      - VMs
+      operationId: updateVm
+      summary: Change timeout_seconds, metadata, auto_pause
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVm'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vm'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - VMs
+      operationId: killVm
+      summary: Kill a VM
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/connect:
+    post:
+      tags:
+      - VMs
+      operationId: connectVm
+      summary: Return the VM and resume it if paused
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vm'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/extend:
+    post:
+      tags:
+      - VMs
+      operationId: extendVm
+      summary: Extend the lifetime of a running VM
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Extend'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vm'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/pause:
+    post:
+      tags:
+      - VMs
+      operationId: pauseVm
+      summary: Pause at a tier (hot, standby, archived)
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pause'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vm'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/resume:
+    post:
+      tags:
+      - VMs
+      operationId: resumeVm
+      summary: Resume a paused VM
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vm'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/fork:
+    post:
+      tags:
+      - VMs
+      operationId: forkVm
+      summary: Fork a VM into count new VMs
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Fork'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VmList'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/network:
+    put:
+      tags:
+      - VMs
+      operationId: setVmNetwork
+      summary: Set the egress policy
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Network'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vm'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/metrics:
+    get:
+      tags:
+      - VMs
+      operationId: getVmMetrics
+      summary: CPU, memory, disk and network over a window
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/logs:
+    get:
+      tags:
+      - VMs
+      operationId: getVmLogs
+      summary: Command output log of the VM
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/top:
+    get:
+      tags:
+      - VMs
+      operationId: getVmTop
+      summary: Processes running now, busiest first
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/cost:
+    get:
+      tags:
+      - VMs
+      operationId: getVmCost
+      summary: Cost of this VM in the calendar month (UTC)
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /names:
+    get:
+      tags:
+      - VMs
+      operationId: listNames
+      summary: List the account's VM names
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Name'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/wake-triggers:
+    put:
+      tags:
+      - VMs
+      operationId: setWakeTriggers
+      summary: Configure what wakes a sleeping VM
+      description: Sets the events that wake a paused VM.
+      x-status: planned
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WakeTriggers'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WakeTriggers'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    get:
+      tags:
+      - VMs
+      operationId: getWakeTriggers
+      summary: Read wake triggers
+      x-status: planned
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WakeTriggers'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/commands:
+    post:
+      tags:
+      - Commands
+      operationId: runCommand
+      summary: Run a command to exit, start it detached, or stream it
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunCommand'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Command'
+            text/event-stream:
+              schema:
+                type: string
+                description: 'Server-sent events, each with an id: started (data {pid}), stdout and stderr (data {data}: the output bytes, base64), exit (data {exit_code, signal, timed_out}) and error (data:
+                  the error object). A comment line every 15 s keeps the connection open.'
+            application/x-ndjson:
+              schema:
+                type: string
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    get:
+      tags:
+      - Commands
+      operationId: listCommands
+      summary: Command history, newest first
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Command'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/commands/{cmd}:
+    get:
+      tags:
+      - Commands
+      operationId: getCommand
+      summary: Status and exit code of a command
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/cmd'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Command'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - Commands
+      operationId: signalCommand
+      summary: Send a signal (default TERM) to a running command
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/cmd'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/commands/{cmd}/stream:
+    get:
+      tags:
+      - Commands
+      operationId: streamCommand
+      summary: Replay and follow output (SSE, resumable with Last-Event-ID)
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/cmd'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+            text/event-stream:
+              schema:
+                type: string
+                description: 'SSE frames: stdout, stderr, exit, error'
+            application/x-ndjson:
+              schema:
+                type: string
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/commands/{cmd}/logs:
+    get:
+      tags:
+      - Commands
+      operationId: getCommandLogs
+      summary: stdout and stderr, also after exit
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/cmd'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/commands/{cmd}/input:
+    post:
+      tags:
+      - Commands
+      operationId: sendCommandInput
+      summary: Write text to a running command's stdin (data), and close it with eof; 409 when the command ended
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/cmd'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommandInput'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/pty:
+    get:
+      tags:
+      - Commands
+      operationId: openPty
+      summary: Interactive terminal over WebSocket (ticket in query)
+      description: Opens an interactive terminal over WebSocket.
+      x-status: planned
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-websocket: true
+  /vms/{vm}/code:
+    post:
+      tags:
+      - Commands
+      operationId: runCode
+      summary: Run code in a kernel context; answers the output, results and error of the run
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunCode'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeRun'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/files:
+    get:
+      tags:
+      - Files
+      operationId: readFile
+      summary: 'Read a file: the bytes of the file at the path query'
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/filePath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    put:
+      tags:
+      - Files
+      operationId: writeFile
+      summary: 'Write a file: the request body is the file''s bytes; folders on the way are created'
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/filePath'
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileInfo'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - Files
+      operationId: deleteFile
+      summary: Delete a file or folder; answers 204
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/filePath'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/files/list:
+    get:
+      tags:
+      - Files
+      operationId: listFiles
+      summary: List a directory
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/dirPath'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/FileEntry'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/files/search:
+    post:
+      tags:
+      - Files
+      operationId: searchFiles
+      summary: Find files by name under a path
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/files/find:
+    post:
+      tags:
+      - Files
+      operationId: findInFiles
+      summary: Find text in files under a path
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/files/replace:
+    post:
+      tags:
+      - Files
+      operationId: replaceInFiles
+      summary: Replace text across files
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileReplace'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/files/permissions:
+    post:
+      tags:
+      - Files
+      operationId: setFilePermissions
+      summary: Set mode, owner and group
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FilePerm'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/files/signed-url:
+    post:
+      tags:
+      - Files
+      operationId: signFileUrl
+      summary: Short-lived upload or download URL
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignedUrlReq'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/ports:
+    get:
+      tags:
+      - Ports
+      operationId: listPorts
+      summary: Exposed ports with URLs
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Port'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+      - Ports
+      operationId: exposePort
+      summary: Expose a port, public or token-protected
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExposePort'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Port'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/ports/{port}:
+    delete:
+      tags:
+      - Ports
+      operationId: hidePort
+      summary: Hide a port
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/port'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/ssh:
+    get:
+      tags:
+      - SSH
+      operationId: getSshDoor
+      summary: How to reach the VM over SSH
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/ssh-keys:
+    get:
+      tags:
+      - SSH
+      operationId: listSshKeys
+      summary: Authorized public keys
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SshKey'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+      - SSH
+      operationId: addSshKey
+      summary: Authorize an OpenSSH public key
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddSshKey'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SshKey'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/ssh-keys/{keyId}:
+    delete:
+      tags:
+      - SSH
+      operationId: removeSshKey
+      summary: Revoke a key
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/keyId'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/snapshots:
+    post:
+      tags:
+      - Snapshots
+      operationId: createSnapshot
+      summary: Save the VM as a named snapshot
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSnapshot'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Snapshot'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    get:
+      tags:
+      - Snapshots
+      operationId: listVmSnapshots
+      summary: Snapshots taken of one VM
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Snapshot'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /snapshots:
+    get:
+      tags:
+      - Snapshots
+      operationId: listSnapshots
+      summary: All snapshots, newest first
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Snapshot'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /snapshots/{snap}:
+    get:
+      tags:
+      - Snapshots
+      operationId: getSnapshot
+      summary: Read a snapshot
+      parameters:
+      - $ref: '#/components/parameters/snap'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Snapshot'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - Snapshots
+      operationId: deleteSnapshot
+      summary: Delete a snapshot (VMs started from it keep running)
+      parameters:
+      - $ref: '#/components/parameters/snap'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+  /snapshots/{snap}/tree:
+    get:
+      tags:
+      - Snapshots
+      operationId: getSnapshotTree
+      summary: Files inside a snapshot
+      parameters:
+      - $ref: '#/components/parameters/snap'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /snapshots/{snap}/files:
+    get:
+      tags:
+      - Snapshots
+      operationId: getSnapshotFile
+      summary: Download one file from a snapshot
+      parameters:
+      - $ref: '#/components/parameters/snap'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /snapshots/{snap}/archive:
+    get:
+      tags:
+      - Snapshots
+      operationId: getSnapshotArchive
+      summary: Download a file or folder as an archive
+      parameters:
+      - $ref: '#/components/parameters/snap'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /snapshots/{snap}/start:
+    post:
+      tags:
+      - Snapshots
+      operationId: startFromSnapshot
+      summary: Start a VM from a snapshot
+      parameters:
+      - $ref: '#/components/parameters/snap'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vm'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/checkpoints:
+    post:
+      tags:
+      - Checkpoints
+      operationId: createCheckpoint
+      summary: Checkpoint the running VM as the next timeline step
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckpoint'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Checkpoint'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    get:
+      tags:
+      - Checkpoints
+      operationId: listCheckpoints
+      summary: Timeline, oldest first
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Checkpoint'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/rewind:
+    post:
+      tags:
+      - Checkpoints
+      operationId: rewindVm
+      summary: Rewind to a checkpoint; keeps both histories
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Rewind'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vm'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /templates:
+    get:
+      tags:
+      - Templates
+      operationId: listTemplates
+      summary: Templates the key can start
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Template'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /templates/{tpl}:
+    get:
+      tags:
+      - Templates
+      operationId: getTemplate
+      summary: One template by id or alias
+      parameters:
+      - $ref: '#/components/parameters/tpl'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /templates/aliases/{alias}:
+    get:
+      tags:
+      - Templates
+      operationId: resolveTemplateAlias
+      summary: Resolve an alias
+      parameters:
+      - $ref: '#/components/parameters/alias'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/agent/prompt:
+    post:
+      tags:
+      - Agents
+      operationId: promptAgent
+      summary: Prompt a coding agent in the VM
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentPrompt'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentPromptStatus'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/agent/prompts/{promptId}:
+    get:
+      tags:
+      - Agents
+      operationId: getAgentPrompt
+      summary: Status of one prompt
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/promptId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentPromptStatus'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/agent/conversations:
+    get:
+      tags:
+      - Agents
+      operationId: listConversations
+      summary: Agent conversations
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Object'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/agent/conversations/{conversationId}:
+    get:
+      tags:
+      - Agents
+      operationId: getConversation
+      summary: One conversation
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/conversationId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/agent/events:
+    get:
+      tags:
+      - Agents
+      operationId: streamAgentEvents
+      summary: Read or follow agent events (SSE)
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+            text/event-stream:
+              schema:
+                type: string
+                description: 'SSE frames: stdout, stderr, exit, error'
+            application/x-ndjson:
+              schema:
+                type: string
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/agent/steer:
+    post:
+      tags:
+      - Agents
+      operationId: steerAgent
+      summary: Steer a running turn
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentSteer'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/agent/interrupt:
+    post:
+      tags:
+      - Agents
+      operationId: interruptAgent
+      summary: Interrupt running turns
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+  /state:
+    get:
+      tags:
+      - State
+      operationId: getStateUsage
+      summary: Account state usage and ceilings
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /state/{ns}:
+    get:
+      tags:
+      - State
+      operationId: listStateKeys
+      summary: Keys of a namespace
+      parameters:
+      - $ref: '#/components/parameters/ns'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - State
+      operationId: deleteStateNamespace
+      summary: Delete a namespace
+      parameters:
+      - $ref: '#/components/parameters/ns'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+  /state/{ns}/{key}:
+    get:
+      tags:
+      - State
+      operationId: getStateValue
+      summary: Read a value
+      parameters:
+      - $ref: '#/components/parameters/ns'
+      - $ref: '#/components/parameters/key'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    put:
+      tags:
+      - State
+      operationId: putStateValue
+      summary: Write a value, optionally at a version
+      parameters:
+      - $ref: '#/components/parameters/ns'
+      - $ref: '#/components/parameters/key'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StateValue'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - State
+      operationId: deleteStateValue
+      summary: Delete a value
+      parameters:
+      - $ref: '#/components/parameters/ns'
+      - $ref: '#/components/parameters/key'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/state:
+    get:
+      tags:
+      - State
+      operationId: listVmStateKeys
+      summary: Keys of the VM's own state
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /vms/{vm}/state/{key}:
+    get:
+      tags:
+      - State
+      operationId: getVmStateValue
+      summary: Read a VM state value
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/key'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    put:
+      tags:
+      - State
+      operationId: putVmStateValue
+      summary: Write a VM state value
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/key'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StateValue'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - State
+      operationId: deleteVmStateValue
+      summary: Delete a VM state value
+      parameters:
+      - $ref: '#/components/parameters/vm'
+      - $ref: '#/components/parameters/key'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+  /ci/jobs:
+    post:
+      tags:
+      - CI
+      operationId: createCiJob
+      summary: Queue a CI job on a runner
+      x-status: planned
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CiJob'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CiJob'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    get:
+      tags:
+      - CI
+      operationId: listCiJobs
+      summary: List CI jobs
+      x-status: planned
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CiJob'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /ci/jobs/{job}:
+    get:
+      tags:
+      - CI
+      operationId: getCiJob
+      summary: Read a CI job
+      x-status: planned
+      parameters:
+      - $ref: '#/components/parameters/job'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CiJob'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers:
+    post:
+      tags:
+      - Browsers
+      operationId: createBrowser
+      summary: Start a Chromium session; returns cdp_url and live_view_url
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBrowser'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Browser'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    get:
+      tags:
+      - Browsers
+      operationId: listBrowsers
+      summary: List browser sessions
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Browser'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/concurrency:
+    get:
+      tags:
+      - Browsers
+      operationId: getBrowserConcurrency
+      summary: Limit, running and free slots
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/{br}:
+    get:
+      tags:
+      - Browsers
+      operationId: getBrowser
+      summary: Read a session and its CDP endpoint
+      parameters:
+      - $ref: '#/components/parameters/br'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Browser'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - Browsers
+      operationId: stopBrowser
+      summary: Stop a session
+      parameters:
+      - $ref: '#/components/parameters/br'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/{br}/control:
+    get:
+      tags:
+      - Browsers
+      operationId: getBrowserControl
+      summary: Who holds input, with audit
+      parameters:
+      - $ref: '#/components/parameters/br'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrowserControl'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      tags:
+      - Browsers
+      operationId: takeBrowserControl
+      summary: Take control as a person; agent input pauses
+      parameters:
+      - $ref: '#/components/parameters/br'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TakeControl'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrowserControlTaken'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags:
+      - Browsers
+      operationId: giveBackBrowserControl
+      summary: Return input to the agent
+      parameters:
+      - $ref: '#/components/parameters/br'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/{br}/live-view-links:
+    post:
+      tags:
+      - Browsers
+      operationId: createLiveViewLink
+      summary: Short-lived signed link to the live view, view-only or take-control, for a person outside the account
+      x-status: planned
+      parameters:
+      - $ref: '#/components/parameters/br'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LiveViewLinkRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LiveViewLink'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/{br}/live-view-links/{link}:
+    delete:
+      tags:
+      - Browsers
+      operationId: revokeLiveViewLink
+      summary: Revoke a live-view link; the audit row stays
+      x-status: planned
+      parameters:
+      - $ref: '#/components/parameters/br'
+      - $ref: '#/components/parameters/linkId'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/{br}/trace:
+    get:
+      tags:
+      - Browsers
+      operationId: getBrowserTrace
+      summary: 'Timeline: navigations, actions, console'
+      parameters:
+      - $ref: '#/components/parameters/br'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/{br}/network:
+    get:
+      tags:
+      - Browsers
+      operationId: getBrowserNetwork
+      summary: Requests with status, type, size, timing
+      parameters:
+      - $ref: '#/components/parameters/br'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/{br}/console:
+    get:
+      tags:
+      - Browsers
+      operationId: getBrowserConsole
+      summary: Console lines and browser log entries
+      parameters:
+      - $ref: '#/components/parameters/br'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/{br}/replay:
+    get:
+      tags:
+      - Browsers
+      operationId: getBrowserReplay
+      summary: Replay frames
+      parameters:
+      - $ref: '#/components/parameters/br'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/{br}/metrics:
+    get:
+      tags:
+      - Browsers
+      operationId: getBrowserMetrics
+      summary: CPU, memory, requests in flight
+      parameters:
+      - $ref: '#/components/parameters/br'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/{br}/checkpoints:
+    post:
+      tags:
+      - Browsers
+      operationId: createBrowserCheckpoint
+      summary: Checkpoint the session
+      x-status: planned
+      parameters:
+      - $ref: '#/components/parameters/br'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckpoint'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Checkpoint'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+    get:
+      tags:
+      - Browsers
+      operationId: listBrowserCheckpoints
+      summary: Browser checkpoint timeline
+      x-status: planned
+      parameters:
+      - $ref: '#/components/parameters/br'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Checkpoint'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/{br}/rewind:
+    post:
+      tags:
+      - Browsers
+      operationId: rewindBrowser
+      summary: Rewind the session
+      x-status: planned
+      parameters:
+      - $ref: '#/components/parameters/br'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Rewind'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Browser'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/{br}/fork:
+    post:
+      tags:
+      - Browsers
+      operationId: forkBrowser
+      summary: Fork the session
+      x-status: planned
+      parameters:
+      - $ref: '#/components/parameters/br'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Fork'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Browser'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/{br}/pause:
+    post:
+      tags:
+      - Browsers
+      operationId: pauseBrowser
+      summary: Sleep the session at $0
+      x-status: planned
+      parameters:
+      - $ref: '#/components/parameters/br'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pause'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Browser'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /browsers/{br}/resume:
+    post:
+      tags:
+      - Browsers
+      operationId: resumeBrowser
+      summary: Resume the session
+      x-status: planned
+      parameters:
+      - $ref: '#/components/parameters/br'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Browser'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /regions:
+    get:
+      tags:
+      - Regions
+      operationId: listRegions
+      summary: Regions where VMs and browsers can start (ams, ash)
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Region'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /usage:
+    get:
+      tags:
+      - Account
+      operationId: getUsage
+      summary: Usage over a window grouped by product, key, project
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /balance:
+    get:
+      tags:
+      - Account
+      operationId: getBalance
+      summary: Dollar balance
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /limits:
+    get:
+      tags:
+      - Account
+      operationId: getLimits
+      summary: Plan limits and current use
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: limits.read
+  /budgets:
+    get:
+      tags:
+      - Account
+      operationId: listBudgets
+      summary: Budgets
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Budget'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.read
+    put:
+      tags:
+      - Account
+      operationId: putBudget
+      summary: Set a budget for account, project or key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Budget'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.write
+  /budgets/{budget}:
+    delete:
+      tags:
+      - Account
+      operationId: deleteBudget
+      summary: Remove a budget
+      parameters:
+      - $ref: '#/components/parameters/budget'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.write
+  /metrics:
+    get:
+      tags:
+      - Account
+      operationId: getMetrics
+      summary: Prometheus text for the account
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+  /plans:
+    get:
+      tags:
+      - Account
+      operationId: listPlans
+      summary: Plans (Trial, $29, $99) with limits and overage
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Plan'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.read
+  /subscription:
+    get:
+      tags:
+      - Account
+      operationId: getSubscription
+      summary: Current plan and period
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.read
+  /invoices:
+    get:
+      tags:
+      - Account
+      operationId: listInvoices
+      summary: Invoices
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Invoice'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.read
+  /keys:
+    post:
+      tags:
+      - Keys
+      operationId: createKey
+      summary: Create a key; secret shown once
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateKey'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Key'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: keys.manage
+    get:
+      tags:
+      - Keys
+      operationId: listKeys
+      summary: List keys
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Key'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: keys.manage
+  /keys/{key}:
+    get:
+      tags:
+      - Keys
+      operationId: getKey
+      summary: Read a key (never the secret)
+      parameters:
+      - $ref: '#/components/parameters/key'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Key'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: keys.manage
+    patch:
+      tags:
+      - Keys
+      operationId: updateKey
+      summary: Rename, change preset or scopes
+      parameters:
+      - $ref: '#/components/parameters/key'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Key'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: keys.manage
+    delete:
+      tags:
+      - Keys
+      operationId: revokeKey
+      summary: Revoke a key
+      parameters:
+      - $ref: '#/components/parameters/key'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: keys.manage
+  /keys/{key}/scopes:
+    get:
+      tags:
+      - Keys
+      operationId: getKeyScopes
+      summary: What the key may do
+      parameters:
+      - $ref: '#/components/parameters/key'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyScopeSet'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: keys.manage
+    put:
+      tags:
+      - Keys
+      operationId: setKeyScopes
+      summary: Set scopes or a preset
+      parameters:
+      - $ref: '#/components/parameters/key'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KeyScopes'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KeyScopeSet'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: keys.manage
+  /webhooks:
+    get:
+      tags:
+      - Webhooks
+      operationId: listWebhooks
+      summary: Endpoints
+      parameters:
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                - has_more
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Webhook'
+                  next_cursor:
+                    type:
+                    - string
+                    - 'null'
+                  has_more:
+                    type: boolean
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.read
+    post:
+      tags:
+      - Webhooks
+      operationId: createWebhook
+      summary: Register an HTTPS endpoint
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhook'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.write
+  /webhooks/deliveries:
+    get:
+      tags:
+      - Webhooks
+      operationId: listWebhookDeliveries
+      summary: Recent deliveries
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.read
+  /webhooks/{whk}:
+    get:
+      tags:
+      - Webhooks
+      operationId: getWebhook
+      summary: One endpoint
+      parameters:
+      - $ref: '#/components/parameters/whk'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.read
+    patch:
+      tags:
+      - Webhooks
+      operationId: updateWebhook
+      summary: Change URL, events, description
+      parameters:
+      - $ref: '#/components/parameters/whk'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWebhook'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.write
+    delete:
+      tags:
+      - Webhooks
+      operationId: deleteWebhook
+      summary: Delete
+      parameters:
+      - $ref: '#/components/parameters/whk'
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.write
+  /webhooks/{whk}/rotate-secret:
+    post:
+      tags:
+      - Webhooks
+      operationId: rotateWebhookSecret
+      summary: Rotate signing secret (24 h overlap)
+      parameters:
+      - $ref: '#/components/parameters/whk'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.write
+  /webhooks/{whk}/test:
+    post:
+      tags:
+      - Webhooks
+      operationId: testWebhook
+      summary: Send a test event
+      parameters:
+      - $ref: '#/components/parameters/whk'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.write
+  /otel:
+    get:
+      tags:
+      - Account
+      operationId: getOtel
+      summary: OpenTelemetry export
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.read
+    put:
+      tags:
+      - Account
+      operationId: putOtel
+      summary: Set the OTLP/HTTP collector
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Object'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.write
+    delete:
+      tags:
+      - Account
+      operationId: deleteOtel
+      summary: Remove the export
+      responses:
+        '204':
+          description: No content
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.write
+  /data-retention:
+    get:
+      tags:
+      - Account
+      operationId: getDataRetention
+      summary: Retention switches
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.read
+    put:
+      tags:
+      - Account
+      operationId: putDataRetention
+      summary: Change retention switches
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Object'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.write
+  /data-retention/deletions:
+    post:
+      tags:
+      - Account
+      operationId: createDeletion
+      summary: Delete every VM and snapshot of the account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Object'
+      responses:
+        default:
+          $ref: '#/components/responses/Error'
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+      x-required-scope: keys.manage
+  /data-retention/deletions/{deletion}:
+    get:
+      tags:
+      - Account
+      operationId: getDeletion
+      summary: One deletion operation
+      parameters:
+      - $ref: '#/components/parameters/deletion'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: account.read
+  /data-retention/close-account:
+    post:
+      tags:
+      - Account
+      operationId: closeAccount
+      summary: Delete all data then close the account
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: keys.manage
+  /tickets:
+    post:
+      tags:
+      - Account
+      operationId: createTicket
+      summary: Mint a single-use WebSocket ticket (pty, live view, CDP)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketReq'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: vms or browsers
+  /events:
+    get:
+      tags:
+      - Account
+      operationId: streamEvents
+      summary: 'Account event stream (SSE): vm.*, browser.*, usage.*'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+            text/event-stream:
+              schema:
+                type: string
+                description: 'SSE frames: id is the event id (send it back as Last-Event-ID to resume), event is the type (vm.created, vm.paused, vm.resumed, vm.killed, vm.timeout, vm.error), data is {object,
+                  id, type, created_at, data}. A stream ends after ten minutes; reconnect with Last-Event-ID.'
+            application/x-ndjson:
+              schema:
+                type: string
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      x-required-scope: events.read
+  /health:
+    get:
+      tags:
+      - Account
+      operationId: health
+      summary: Liveness (no auth)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Object'
+          headers:
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        default:
+          $ref: '#/components/responses/Error'
+      security: []
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: "sty_live_\u2026 (also e2b_\u2026 keys); X-API-Key is accepted as an alternative."
+  parameters:
+    filePath:
+      name: path
+      in: query
+      required: true
+      description: Absolute path in the VM; a relative path starts in the home directory.
+      schema:
+        type: string
+    dirPath:
+      name: path
+      in: query
+      required: false
+      description: Absolute path of the directory; defaults to the home directory.
+      schema:
+        type: string
+    linkId:
+      name: link
+      in: path
+      required: true
+      schema:
+        type: string
+    vm:
+      name: vm
+      in: path
+      required: true
+      schema:
+        type: string
+    cmd:
+      name: cmd
+      in: path
+      required: true
+      schema:
+        type: string
+    port:
+      name: port
+      in: path
+      required: true
+      schema:
+        type: integer
+    keyId:
+      name: keyId
+      in: path
+      required: true
+      schema:
+        type: string
+    snap:
+      name: snap
+      in: path
+      required: true
+      schema:
+        type: string
+    tpl:
+      name: tpl
+      in: path
+      required: true
+      schema:
+        type: string
+    alias:
+      name: alias
+      in: path
+      required: true
+      schema:
+        type: string
+    promptId:
+      name: promptId
+      in: path
+      required: true
+      schema:
+        type: string
+    conversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema:
+        type: string
+    ns:
+      name: ns
+      in: path
+      required: true
+      schema:
+        type: string
+    key:
+      name: key
+      in: path
+      required: true
+      schema:
+        type: string
+    job:
+      name: job
+      in: path
+      required: true
+      schema:
+        type: string
+    br:
+      name: br
+      in: path
+      required: true
+      schema:
+        type: string
+    budget:
+      name: budget
+      in: path
+      required: true
+      schema:
+        type: string
+    whk:
+      name: whk
+      in: path
+      required: true
+      schema:
+        type: string
+    deletion:
+      name: deletion
+      in: path
+      required: true
+      schema:
+        type: string
+    limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      schema:
+        type: string
+        maxLength: 255
+      description: Replayed for 24 h per account and path; same key with another body = 422.
+  schemas:
+    Object:
+      type: object
+      additionalProperties: true
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            status:
+              type: integer
+            message:
+              type: string
+            origin:
+              type: string
+              enum:
+              - client
+              - customer_limit
+              - infrastructure
+              - guest
+              - agent
+              - unknown
+            request_id:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+            doc_url:
+              type: string
+          required:
+          - code
+          - status
+          - message
+          - request_id
+      required:
+      - error
+      description: 'Codes: unauthenticated, permission_denied, plan_required, payment_required, not_found, vm_ended, conflict, failed_precondition, invalid_argument, quota_exceeded, limit_concurrent, limit_hours,
+        limit_rate_minute, limit_rate_hour, limit_rate_day, limit_storage, capacity, capacity_provisioning, create_deadline, account_suspended, account_throttled, node_loss, agent_exit, command_timeout,
+        sandbox_timeout, upstream_error, not_implemented. Open enum.'
+    Vm:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          const: vm
+        state:
+          type: string
+          enum:
+          - starting
+          - running
+          - paused
+          - ended
+        pause_tier:
+          type:
+          - string
+          - 'null'
+          enum:
+          - hot
+          - standby
+          - archived
+          - null
+        region:
+          type: string
+        template:
+          type: string
+        size:
+          type: string
+        vcpus:
+          type: integer
+        memory_mib:
+          type: integer
+        timeout_seconds:
+          type: integer
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/Port'
+      required:
+      - id
+      - state
+      - created_at
+    VmList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Vm'
+    CreateVm:
+      type: object
+      properties:
+        template:
+          type: string
+        snapshot:
+          type: string
+        size:
+          type: string
+        vcpus:
+          type: integer
+        memory_mib:
+          type: integer
+        region:
+          type: string
+        timeout_seconds:
+          type: integer
+        auto_pause:
+          type: boolean
+        auto_resume:
+          type: boolean
+        lifecycle:
+          type: object
+          additionalProperties: true
+        network:
+          $ref: '#/components/schemas/Network'
+        env:
+          type: object
+          additionalProperties:
+            type: string
+        secure:
+          type: boolean
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+      description: Name a template, a snapshot or a size; none = default size.
+    UpdateVm:
+      type: object
+      properties:
+        timeout_seconds:
+          type: integer
+        metadata:
+          type: object
+          additionalProperties: true
+        auto_pause:
+          type: boolean
+    Extend:
+      type: object
+      properties:
+        seconds:
+          type: integer
+      required:
+      - seconds
+    Pause:
+      type: object
+      properties:
+        tier:
+          type: string
+          enum:
+          - hot
+          - standby
+          - archived
+          default: hot
+    Fork:
+      type: object
+      properties:
+        count:
+          type: integer
+          minimum: 1
+          default: 1
+    Network:
+      type: object
+      properties:
+        allow_internet_access:
+          type: boolean
+        allow_out:
+          type: array
+          items:
+            type: string
+        deny_out:
+          type: array
+          items:
+            type: string
+    WakeTriggers:
+      type: object
+      properties:
+        'true':
+          type: array
+          items:
+            type: string
+            enum:
+            - http
+            - ssh
+            - tcp
+            - schedule
+            - webhook
+        schedule:
+          type: string
+      x-status: planned
+    RunCommand:
+      type: object
+      properties:
+        cmd:
+          type: string
+        args:
+          type: array
+          items:
+            type: string
+        cwd:
+          type: string
+        env:
+          type: object
+          additionalProperties: true
+        user:
+          type: string
+        stdin:
+          type: string
+        timeout_seconds:
+          type: integer
+        detach:
+          type: boolean
+        stream:
+          type: boolean
+      required:
+      - cmd
+    Command:
+      type: object
+      properties:
+        id:
+          type: string
+        state:
+          type: string
+          enum:
+          - running
+          - exited
+          - signaled
+          - timeout
+        exit_code:
+          type:
+          - integer
+          - 'null'
+        stdout:
+          type: string
+        stderr:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+    CommandInput:
+      type: object
+      properties:
+        data:
+          type: string
+          description: Text written to the command's stdin.
+        eof:
+          type: boolean
+          description: Close stdin after the data.
+    RunCode:
+      type: object
+      properties:
+        code:
+          type: string
+        language:
+          type: string
+        context_id:
+          type: string
+        env:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+      - code
+    FileQuery:
+      type: object
+      properties:
+        path:
+          type: string
+        pattern:
+          type: string
+      required:
+      - path
+    FileReplace:
+      type: object
+      properties:
+        path:
+          type: string
+        find:
+          type: string
+        replace:
+          type: string
+      required:
+      - path
+      - find
+      - replace
+    FilePerm:
+      type: object
+      properties:
+        path:
+          type: string
+        mode:
+          type: string
+        owner:
+          type: string
+        group:
+          type: string
+      required:
+      - path
+    SignedUrlReq:
+      type: object
+      properties:
+        path:
+          type: string
+        operation:
+          type: string
+          enum:
+          - upload
+          - download
+        expires_in:
+          type: integer
+      required:
+      - path
+      - operation
+    Port:
+      type: object
+      properties:
+        port:
+          type: integer
+        url:
+          type: string
+        public:
+          type: boolean
+        token:
+          type: string
+    ExposePort:
+      type: object
+      properties:
+        port:
+          type: integer
+        public:
+          type: boolean
+      required:
+      - port
+    SshKey:
+      type: object
+      properties:
+        id:
+          type: string
+        public_key:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    AddSshKey:
+      type: object
+      properties:
+        public_key:
+          type: string
+      required:
+      - public_key
+    Snapshot:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        vm_id:
+          type: string
+        size_bytes:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    CreateSnapshot:
+      type: object
+      properties:
+        name:
+          type: string
+    Checkpoint:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        step:
+          type: integer
+        follows:
+          type:
+          - string
+          - 'null'
+        snapshot:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    CreateCheckpoint:
+      type: object
+      properties:
+        label:
+          type: string
+    Rewind:
+      type: object
+      properties:
+        checkpoint:
+          type: string
+      required:
+      - checkpoint
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+        aliases:
+          type: array
+          items:
+            type: string
+        vcpus:
+          type: integer
+        memory_mib:
+          type: integer
+        regions:
+          type: array
+          items:
+            type: string
+    AgentPrompt:
+      type: object
+      properties:
+        agent:
+          type: string
+          examples:
+          - claude-code
+          - codex
+        prompt:
+          type: string
+        conversation_id:
+          type: string
+      required:
+      - prompt
+    AgentPromptStatus:
+      type: object
+      properties:
+        id:
+          type: string
+        state:
+          type: string
+    AgentSteer:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+      - message
+    StateValue:
+      type: object
+      properties:
+        value: {}
+        version:
+          type: integer
+      required:
+      - value
+    CiJob:
+      type: object
+      properties:
+        id:
+          type: string
+        state:
+          type: string
+        repo:
+          type: string
+        command:
+          type: string
+        runner:
+          type: string
+    Browser:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          const: browser
+        state:
+          type: string
+        region:
+          type: string
+        cdp_url:
+          type: string
+          description: wss:// endpoint for playwright connect_over_cdp or puppeteer.connect; embeds a session-scoped token.
+        live_view_url:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+      required:
+      - id
+      - state
+      - cdp_url
+    CreateBrowser:
+      type: object
+      properties:
+        region:
+          type: string
+        timeout_seconds:
+          type: integer
+        secure:
+          type: boolean
+        metadata:
+          type: object
+          additionalProperties: true
+        viewport:
+          type: object
+          properties:
+            width:
+              type: integer
+            height:
+              type: integer
+        proxy:
+          type: string
+    TakeControl:
+      type: object
+      properties:
+        holder:
+          type: string
+          description: Name for the audit row, for example the person at the live view. Defaults to the key that took control.
+    FileInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+        type:
+          type: string
+          enum:
+          - file
+          - directory
+      required:
+      - name
+      - path
+      - type
+    FileEntry:
+      type: object
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+        type:
+          type: string
+          enum:
+          - file
+          - directory
+        size:
+          type: integer
+          description: Bytes.
+      required:
+      - name
+      - path
+      - type
+      - size
+    CodeRun:
+      type: object
+      properties:
+        object:
+          const: code_run
+        stdout:
+          type: string
+        stderr:
+          type: string
+        results:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: 'Rich results of the cells: text, and png, html, json or other formats when the code produced them.'
+        error:
+          oneOf:
+          - type: 'null'
+          - type: object
+            properties:
+              name:
+                type: string
+              value:
+                type: string
+              traceback:
+                type: string
+        execution_count:
+          type:
+          - integer
+          - 'null'
+      required:
+      - stdout
+      - stderr
+      - results
+      - error
+    BrowserControl:
+      type: object
+      properties:
+        controlled:
+          type: boolean
+        holder:
+          type:
+          - string
+          - 'null'
+        taken_at_ms:
+          type:
+          - integer
+          - 'null'
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              control_id:
+                type: string
+              holder:
+                type: string
+              taken_at_ms:
+                type: integer
+              returned_at_ms:
+                type:
+                - integer
+                - 'null'
+              ended_by:
+                type:
+                - string
+                - 'null'
+      required:
+      - controlled
+      - history
+    BrowserControlTaken:
+      type: object
+      properties:
+        control_id:
+          type: string
+        holder:
+          type: string
+        taken_at_ms:
+          type: integer
+        expires_in:
+          type: integer
+          description: Seconds the hold lasts without a keep-alive.
+        cdp_url:
+          type: string
+          description: 'The session''s CDP URL with the control id: a connection made with it is the person''s.'
+      required:
+      - control_id
+      - holder
+      - cdp_url
+    LiveViewLinkRequest:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum:
+          - view
+          - control
+          default: view
+        expires_in_seconds:
+          type: integer
+          minimum: 60
+          maximum: 86400
+          default: 900
+    LiveViewLink:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          const: live_view_link
+        url:
+          type: string
+          description: Opens the live view without a Styne login; the signature in the URL is the whole authorisation.
+        mode:
+          type: string
+          enum:
+          - view
+          - control
+        expires_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - url
+      - mode
+      - expires_at
+    Region:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        available:
+          type: boolean
+        products:
+          type: array
+          items:
+            type: string
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price_usd_month:
+          type: number
+        credit_grant_usd:
+          type: number
+        limits:
+          type: object
+          properties:
+            rate_limit_rpm:
+              type: integer
+            concurrency:
+              type: integer
+            log_retention_days:
+              type: integer
+        support_level:
+          type: string
+        perks:
+          type: array
+          items:
+            type: string
+    Budget:
+      type: object
+      description: A spending limit for a day or a month. Only account budgets are enforced; for one API key use the key's monthly spend cap.
+      properties:
+        object:
+          type: string
+          enum:
+          - run_budget
+        id:
+          type: string
+        scope:
+          type: string
+          enum:
+          - account
+        period:
+          type: string
+          enum:
+          - day
+          - month
+        limit_micro:
+          type: integer
+          description: The limit in millionths of a dollar.
+        threshold_pct:
+          type: integer
+          description: The share of the limit at which the owners are first told.
+        action:
+          type: string
+          enum:
+          - notify
+          - pause
+          description: pause refuses new creates while the account is over the limit.
+        spent_micro:
+          type: integer
+        state:
+          type: string
+          enum:
+          - within
+          - alert
+          - over
+        holding_creates:
+          type: boolean
+        period_start:
+          type: string
+          format: date-time
+        resets_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    Name:
+      type: object
+      properties:
+        name:
+          type: string
+        vm_id:
+          type: string
+    Key:
+      type: object
+      properties:
+        object:
+          type: string
+          enum:
+          - key
+        id:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        last4:
+          type: string
+        preset:
+          type: string
+          enum:
+          - full
+          - vms
+          - browsers
+          - ci
+          description: What the key may do. A key made without one runs workloads and reads its limits and events; account settings and keys need full.
+        status:
+          type: string
+          enum:
+          - active
+          - revoked
+          - expired
+          - frozen
+        secret:
+          type: string
+          description: Returned once at creation only.
+        created_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    CreateKey:
+      type: object
+      properties:
+        name:
+          type: string
+        preset:
+          type: string
+          enum:
+          - full
+          - vms
+          - browsers
+          - ci
+      required:
+      - name
+    UpdateKey:
+      type: object
+      properties:
+        name:
+          type: string
+        preset:
+          type: string
+          enum:
+          - full
+          - vms
+          - browsers
+          - ci
+    KeyScopes:
+      type: object
+      description: Send a preset, or scopes that are exactly the scopes of one preset.
+      properties:
+        preset:
+          type: string
+          enum:
+          - full
+          - vms
+          - browsers
+          - ci
+        scopes:
+          type: array
+          items:
+            type: string
+    Webhook:
+      type: object
+      properties:
+        object:
+          type: string
+          enum:
+          - webhook
+        id:
+          type: string
+        url:
+          type: string
+        events:
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+          - enabled
+          - disabled
+        disabled_reason:
+          type: string
+        secret:
+          type: string
+          description: Signing secret, returned at creation and rotation only. Standard Webhooks headers.
+        created_at:
+          type: string
+          format: date-time
+    CreateWebhook:
+      type: object
+      properties:
+        url:
+          type: string
+        events:
+          type: array
+          items:
+            type: string
+            enum:
+            - '*'
+            - vm.created
+            - vm.paused
+            - vm.resumed
+            - vm.killed
+            - vm.timeout
+            - vm.error
+          description: Empty or ["*"] sends every event.
+        description:
+          type: string
+      required:
+      - url
+    TicketReq:
+      type: object
+      properties:
+        resource:
+          type: string
+          description: The id of the VM.
+        kind:
+          type: string
+          enum:
+          - pty
+          - live_view
+      required:
+      - resource
+      - kind
+    BudgetInput:
+      type: object
+      required:
+      - limit_micro
+      properties:
+        scope:
+          type: string
+          enum:
+          - account
+          default: account
+        period:
+          type: string
+          enum:
+          - day
+          - month
+          default: month
+        limit_micro:
+          type: integer
+          minimum: 1
+        action:
+          type: string
+          enum:
+          - notify
+          - pause
+          default: notify
+        threshold_pct:
+          type: integer
+          minimum: 1
+          maximum: 99
+    Invoice:
+      type: object
+      properties:
+        object:
+          type: string
+          enum:
+          - invoice
+        id:
+          type: string
+        number:
+          type: string
+        status:
+          type: string
+        subtotal_cents:
+          type: integer
+        tax_cents:
+          type: integer
+        total_cents:
+          type: integer
+        amount_paid_cents:
+          type: integer
+        hosted_invoice_url:
+          type: string
+        pdf_url:
+          type: string
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+        issued_at:
+          type: string
+          format: date-time
+        paid_at:
+          type: string
+          format: date-time
+    KeyScopeSet:
+      type: object
+      properties:
+        object:
+          type: string
+          enum:
+          - key_scopes
+        key_id:
+          type: string
+        preset:
+          type: string
+          enum:
+          - full
+          - vms
+          - browsers
+          - ci
+        scopes:
+          type: array
+          items:
+            type: string
+    UpdateWebhook:
+      type: object
+      properties:
+        url:
+          type: string
+        events:
+          type: array
+          items:
+            type: string
+            enum:
+            - '*'
+            - vm.created
+            - vm.paused
+            - vm.resumed
+            - vm.killed
+            - vm.timeout
+            - vm.error
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+          - enabled
+          - disabled
+    Ticket:
+      type: object
+      properties:
+        object:
+          type: string
+          enum:
+          - ticket
+        ticket:
+          type: string
+          description: Single use, valid for a minute.
+        kind:
+          type: string
+          enum:
+          - pty
+          - live_view
+        resource:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        ws_url:
+          type: string
+  headers:
+    RateLimit-Limit:
+      description: Requests allowed in the tightest window
+      schema:
+        type: integer
+    RateLimit-Remaining:
+      description: Requests left
+      schema:
+        type: integer
+    RateLimit-Reset:
+      description: Seconds until reset
+      schema:
+        type: integer
+    X-Request-Id:
+      description: Request id, equals error.request_id
+      schema:
+        type: string
+  responses:
+    Error:
+      description: Error envelope (see schema Error); 429 and 503 add Retry-After.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
